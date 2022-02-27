@@ -5,7 +5,10 @@
 Model::Model(const std::string filename) {
     std::ifstream in;
     in.open(filename, std::ifstream::in);
-    if (in.fail()) return;
+    if (in.fail()) {
+        throw std::runtime_error("bad file");
+    };
+
     std::string line;
     while (!in.eof()) {
         std::getline(in, line);
