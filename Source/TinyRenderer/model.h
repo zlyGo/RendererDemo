@@ -1,3 +1,5 @@
+#ifndef MODEL_H
+#define MODEL_H
 #include <vector>
 #include <string>
 #include "geometry.h"
@@ -27,3 +29,4 @@ public:
     const TGAImage& specular() const { return specularmap; }
 };
 
+#endif // MODEL_H

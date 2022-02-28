@@ -14,6 +14,7 @@ namespace RenderTask {
         MeshModel(const std::string& modelPath);
         ~MeshModel() = default;
         bool WriteMeshIntoFile(const std::string& fileName, FileType type = FileType::TGA);
+        bool WriteRasterizedMeshIntoFile(const std::string& fileName, FileType type = FileType::TGA);
 
     private:
         bool LoadModel(const std::string& modelPath);
@@ -24,4 +25,4 @@ namespace RenderTask {
     };
 }
 
-#endif
+#endif // MESH_MODEL_H

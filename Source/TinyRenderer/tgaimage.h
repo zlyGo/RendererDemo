@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TGA_IMAGE_H
+#define TGA_IMAGE_H
 #include <cstdint>
 #include <fstream>
 #include <vector>
@@ -55,3 +56,4 @@ private:
     std::vector<std::uint8_t> data = {};
 };
 
+#endif // TGA_IMAGE_H

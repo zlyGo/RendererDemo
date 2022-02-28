@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GEOMETRY_H
+#define GEOMETRY_H
 #include <cmath>
 #include <cassert>
 #include <iostream>
@@ -217,3 +218,4 @@ template<> struct dt<1> {
     }
 };
 
+#endif // GEOMETRY_H
