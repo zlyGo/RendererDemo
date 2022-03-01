@@ -128,23 +128,28 @@ namespace RenderTask {
         }
 
         TGAImage image(width, height, TGAImage::Format::RGB);
+        vec3 lightDir(0, 0, -1);
         int faces = m_model->nfaces();
         for (int i = 0; i < faces; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                vec3 vert0 = m_model->vert(i, j);
-                vec3 vert1 = m_model->vert(i, (j + 1) % 3);
-                vec3 vert2 = m_model->vert(i, (j + 2) % 3);
-                vec2 v0;
-                vec2 v1;
-                vec2 v2;
-                // NOTE: static_cast to int have to be done, otherwise a precision problem may happen
-                v0.x = static_cast<int>((vert0.x + 1.0) * width / 2.0);
-                v0.y = static_cast<int>((vert0.y + 1.0) * height / 2.0);
-                v1.x = static_cast<int>((vert1.x + 1.0) * width / 2.0);
-                v1.y = static_cast<int>((vert1.y + 1.0) * height / 2.0);
-                v2.x = static_cast<int>((vert2.x + 1.0) * width / 2.0);
-                v2.y = static_cast<int>((vert2.y + 1.0) * height / 2.0);
-                DrawTriangle(v0, v1, v2, image, GetRandomColor());
+            vec3 vert0 = m_model->vert(i, 0);
+            vec3 vert1 = m_model->vert(i, 1);
+            vec3 vert2 = m_model->vert(i, 2);
+            vec2 v0;
+            vec2 v1;
+            vec2 v2;
+            // NOTE: static_cast to int have to be done, otherwise a precision problem may happen
+            v0.x = static_cast<int>((vert0.x + 1.0) * width / 2.0);
+            v0.y = static_cast<int>((vert0.y + 1.0) * height / 2.0);
+            v1.x = static_cast<int>((vert1.x + 1.0) * width / 2.0);
+            v1.y = static_cast<int>((vert1.y + 1.0) * height / 2.0);
+            v2.x = static_cast<int>((vert2.x + 1.0) * width / 2.0);
+            v2.y = static_cast<int>((vert2.y + 1.0) * height / 2.0);
+
+            vec3 n = cross(vert2 - vert0, vert1 - vert0);
+            n.normalize();
+            float intensity = n * lightDir;
+            if (intensity > 0) {
+                DrawTriangle(v0, v1, v2, image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
             }
         }
 
