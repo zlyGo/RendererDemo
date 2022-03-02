@@ -65,7 +65,8 @@ namespace RenderTask {
             return { 1.0 - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z };
         }
 
-        void DrawTriangleWithDepth(vec3 v0, vec3 v1, vec3 v2, std::vector<float>& zBuffer, TGAImage& image, TGAColor color)
+        void DrawTriangleWithDepth(vec3 v0, vec3 v1, vec3 v2, std::vector<float>& zBuffer, TGAImage& image,
+            vec2 uv0, vec2 uv1, vec2 uv2, const TGAImage& texture)
         {
             vec2 bBoxMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
             vec2 bBoxMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
@@ -81,6 +82,8 @@ namespace RenderTask {
                 bBoxMax[i] = std::min(clamp[i], std::max(bBoxMax[i], v2[i]));
             }
 
+            int texWidth = texture.width();
+            int texHeight = texture.height();
             vec3 p;
             for (p.x = bBoxMin.x; p.x < bBoxMax.x; ++p.x) {
                 for (p.y = bBoxMin.y; p.y < bBoxMax.y; ++p.y) {
@@ -93,7 +96,22 @@ namespace RenderTask {
 
                     if (zBuffer[int(p.x + p.y * width)] < p.z) {
                         zBuffer[int(p.x + p.y * width)] = p.z;
-                        image.set(p.x, p.y, color);
+
+                        int u0 = uv0.x * texture.width();
+                        int v0 = uv0.y * texture.height();
+                        int u1 = uv1.x * texture.width();
+                        int v1 = uv1.y * texture.height();
+                        int u2 = uv2.x * texture.width();
+                        int v2 = uv2.y * texture.height();
+                        TGAColor renderColor(0, 0, 0, 255);
+                        renderColor[0] = texture.get(u0, v0)[0] * screenBC.x +
+                            texture.get(u1, v1)[0] * screenBC.y + texture.get(u2, v2)[0] * screenBC.z;
+                        renderColor[1] = texture.get(u0, v0)[1] * screenBC.x +
+                            texture.get(u1, v1)[1] * screenBC.y + texture.get(u2, v2)[1] * screenBC.z;
+                        renderColor[2] = texture.get(u0, v0)[2] * screenBC.x +
+                            texture.get(u1, v1)[2] * screenBC.y + texture.get(u2, v2)[2] * screenBC.z;
+
+                        image.set(p.x, p.y, renderColor);
                     }
                 }
             }
@@ -172,8 +190,10 @@ namespace RenderTask {
             n.normalize();
             float intensity = n * lightDir;
             if (intensity > 0) {
-                DrawTriangleWithDepth(v0, v1, v2, zBuffer, image,
-                    TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
+                auto uv0 = m_model->uv(i, 0);
+                auto uv1 = m_model->uv(i, 1);
+                auto uv2 = m_model->uv(i, 2);
+                DrawTriangleWithDepth(v0, v1, v2, zBuffer, image,uv0, uv1, uv2, m_model->diffuse());
             }
         }
 
