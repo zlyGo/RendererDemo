@@ -55,31 +55,47 @@ namespace RenderTask {
             }
         }
 
-        void DrawTriangle(vec2 t0, vec2 t1, vec2 t2, TGAImage& image, TGAColor color)
+        vec3 Barycentric(vec3 v0, vec3 v1, vec3 v2, vec3 p)
         {
-            if (t0.y > t1.y) {
-                std::swap(t0, t1);
+            vec3 u = cross({ v2.x - v0.x, v1.x - v0.x, v0.x - p.x }, { v2.y - v0.y, v1.y - v0.y, v0.y - p.y });
+            if (std::abs(u.z) < 1e-2) {
+                return vec3(-1, -1, -1);
             }
 
-            if (t0.y > t2.y) {
-                std::swap(t0, t2);
+            return { 1.0 - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z };
+        }
+
+        void DrawTriangleWithDepth(vec3 v0, vec3 v1, vec3 v2, std::vector<float>& zBuffer, TGAImage& image, TGAColor color)
+        {
+            vec2 bBoxMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+            vec2 bBoxMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+
+            vec2 clamp((double)image.width() - 1, (double)image.height() - 1);
+            // i = 0 for x coordinate, i = 1 for y coordinate.
+            for (int i = 0; i < 2; ++i) {
+                bBoxMin[i] = std::min(bBoxMin[i], v0[i]);
+                bBoxMin[i] = std::min(bBoxMin[i], v1[i]);
+                bBoxMin[i] = std::max(0.0, std::min(bBoxMin[i], v2[i]));
+                bBoxMax[i] = std::max(bBoxMax[i], v0[i]);
+                bBoxMax[i] = std::max(bBoxMax[i], v1[i]);
+                bBoxMax[i] = std::min(clamp[i], std::max(bBoxMax[i], v2[i]));
             }
 
-            if (t1.y > t2.y) {
-                std::swap(t1, t2);
-            }
+            vec3 p;
+            for (p.x = bBoxMin.x; p.x < bBoxMax.x; ++p.x) {
+                for (p.y = bBoxMin.y; p.y < bBoxMax.y; ++p.y) {
+                    auto screenBC = Barycentric(v0, v1, v2, p);
+                    if (screenBC.x < 0 || screenBC.y < 0 || screenBC.z < 0) {
+                        continue;
+                    }
 
-            for (int y = t0.y; y < t2.y; ++y) {
-                int x0 = t2.x - (t2.x - t0.x) * (t2.y - y) * 1.0 / (t2.y - t0.y);
-                int x1 = 0;
-                if (y < t1.y) {
-                    x1 = t1.x - (t1.x - t0.x) * (t1.y - y) * 1.0 / (t1.y - t0.y);
+                    p.z = float(v0.z * screenBC.x + v1.z * screenBC.y + v2.z * screenBC.z);
+
+                    if (zBuffer[int(p.x + p.y * width)] < p.z) {
+                        zBuffer[int(p.x + p.y * width)] = p.z;
+                        image.set(p.x, p.y, color);
+                    }
                 }
-                else {
-                    x1 = t2.x - (t2.x - t1.x) * (t2.y - y) * 1.0 / (t2.y - t1.y);
-                }
-
-                DrawLine(x0, y, x1, y, image, color);
             }
         }
     };
@@ -128,15 +144,19 @@ namespace RenderTask {
         }
 
         TGAImage image(width, height, TGAImage::Format::RGB);
+        // NOTE: FLT_MIN is a positive value!
+        std::vector<float> zBuffer(width * height, -std::numeric_limits<float>::max());
+
         vec3 lightDir(0, 0, -1);
         int faces = m_model->nfaces();
         for (int i = 0; i < faces; ++i) {
             vec3 vert0 = m_model->vert(i, 0);
             vec3 vert1 = m_model->vert(i, 1);
             vec3 vert2 = m_model->vert(i, 2);
-            vec2 v0;
-            vec2 v1;
-            vec2 v2;
+
+            vec3 v0;
+            vec3 v1;
+            vec3 v2;
             // NOTE: static_cast to int have to be done, otherwise a precision problem may happen
             v0.x = static_cast<int>((vert0.x + 1.0) * width / 2.0);
             v0.y = static_cast<int>((vert0.y + 1.0) * height / 2.0);
@@ -144,12 +164,16 @@ namespace RenderTask {
             v1.y = static_cast<int>((vert1.y + 1.0) * height / 2.0);
             v2.x = static_cast<int>((vert2.x + 1.0) * width / 2.0);
             v2.y = static_cast<int>((vert2.y + 1.0) * height / 2.0);
+            v0.z = vert0.z;
+            v1.z = vert1.z;
+            v2.z = vert2.z;
 
             vec3 n = cross(vert2 - vert0, vert1 - vert0);
             n.normalize();
             float intensity = n * lightDir;
             if (intensity > 0) {
-                DrawTriangle(v0, v1, v2, image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
+                DrawTriangleWithDepth(v0, v1, v2, zBuffer, image,
+                    TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
             }
         }
 
