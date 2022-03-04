@@ -103,15 +103,11 @@ namespace RenderTask {
                         int v1 = uv1.y * texture.height();
                         int u2 = uv2.x * texture.width();
                         int v2 = uv2.y * texture.height();
-                        TGAColor renderColor(0, 0, 0, 255);
-                        renderColor[0] = texture.get(u0, v0)[0] * screenBC.x +
-                            texture.get(u1, v1)[0] * screenBC.y + texture.get(u2, v2)[0] * screenBC.z;
-                        renderColor[1] = texture.get(u0, v0)[1] * screenBC.x +
-                            texture.get(u1, v1)[1] * screenBC.y + texture.get(u2, v2)[1] * screenBC.z;
-                        renderColor[2] = texture.get(u0, v0)[2] * screenBC.x +
-                            texture.get(u1, v1)[2] * screenBC.y + texture.get(u2, v2)[2] * screenBC.z;
 
-                        image.set(p.x, p.y, renderColor);
+                        int dstU = u0 * screenBC.x + u1 * screenBC.y + u2 * screenBC.z;
+                        int dstV = v0 * screenBC.x + v1 * screenBC.y + v2 * screenBC.z;
+
+                        image.set(p.x, p.y, texture.get(dstU, dstV));
                     }
                 }
             }
@@ -186,15 +182,11 @@ namespace RenderTask {
             v1.z = vert1.z;
             v2.z = vert2.z;
 
-            vec3 n = cross(vert2 - vert0, vert1 - vert0);
-            n.normalize();
-            float intensity = n * lightDir;
-            if (intensity > 0) {
-                auto uv0 = m_model->uv(i, 0);
-                auto uv1 = m_model->uv(i, 1);
-                auto uv2 = m_model->uv(i, 2);
-                DrawTriangleWithDepth(v0, v1, v2, zBuffer, image,uv0, uv1, uv2, m_model->diffuse());
-            }
+            auto uv0 = m_model->uv(i, 0);
+            auto uv1 = m_model->uv(i, 1);
+            auto uv2 = m_model->uv(i, 2);
+
+            DrawTriangleWithDepth(v0, v1, v2, zBuffer, image, uv0, uv1, uv2, m_model->diffuse());
         }
 
         image.write_tga_file(fileName);
